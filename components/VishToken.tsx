@@ -6,7 +6,7 @@ export default function VishToken({ size = 20 }: { size?: number }) {
       style={{ width: size, height: size, display: "inline-flex", borderRadius: "50%", overflow: "hidden", border: "1.5px solid #c9a227", verticalAlign: "middle", flexShrink: 0 }}
     >
       <img
-        src="/vish.jpg"
+        src="/vish.png"
         alt="VT"
         style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }}
         onError={(e) => {

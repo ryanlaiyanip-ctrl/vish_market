@@ -118,7 +118,7 @@ export default function Home() {
           <div className="text-center space-y-3">
             <div className="flex justify-center">
               <div style={{ width: 80, height: 80, borderRadius: "50%", overflow: "hidden", border: "3px solid #c9a227", boxShadow: "0 0 24px rgba(201,162,39,0.4)" }}>
-                <img src="/vish.jpg" alt="Vish" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }}
+                <img src="/vish.png" alt="Vish" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }}
                   onError={(e) => { e.currentTarget.style.display = "none"; }} />
               </div>
             </div>
