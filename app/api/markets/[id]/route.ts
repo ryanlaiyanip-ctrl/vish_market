@@ -39,7 +39,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     for (const bet of winningBets) {
       const share = totalWinningPool === 0 ? 0 : (Number(bet.amount) / totalWinningPool) * totalLosingPool;
-      const payout = Math.round(Number(bet.amount) + share);
+      const rawPayout = Math.round(Number(bet.amount) + share);
+      // Guarantee at least 2x if no one bet the other side
+      const payout = Math.max(rawPayout, Number(bet.amount) * 2);
       await sql`UPDATE bets SET payout = ${payout}, settled = TRUE WHERE id = ${bet.id}`;
       await sql`UPDATE users SET balance = balance + ${payout} WHERE id = ${bet.user_id}`;
     }
