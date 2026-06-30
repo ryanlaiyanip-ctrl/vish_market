@@ -33,10 +33,10 @@ interface Props {
 
 function calcOdds(forPool: number, againstPool: number) {
   const total = Number(forPool) + Number(againstPool);
-  if (total === 0) return { forOdds: "2.00", againstOdds: "2.00" };
-  const fo = forPool === 0 ? 99 : total / Number(forPool);
-  const ao = againstPool === 0 ? 99 : total / Number(againstPool);
-  return { forOdds: fo.toFixed(2), againstOdds: ao.toFixed(2) };
+  if (total === 0) return { forOdds: "TBD", againstOdds: "TBD" };
+  const fo = Number(forPool) === 0 ? null : total / Number(forPool);
+  const ao = Number(againstPool) === 0 ? null : total / Number(againstPool);
+  return { forOdds: fo ? fo.toFixed(2) : "TBD", againstOdds: ao ? ao.toFixed(2) : "TBD" };
 }
 
 export default function MarketCard({ market, userId, userBalance, userBets, onBetPlaced }: Props) {
@@ -161,7 +161,11 @@ export default function MarketCard({ market, userId, userBalance, userBets, onBe
           {error && <p className="text-red-400 text-sm">{error}</p>}
           {betAmount && !isNaN(parseInt(betAmount)) && (
             <p className="text-gray-400 text-xs">
-              Potential payout: ~{Math.round(parseInt(betAmount) * parseFloat(selectedSide === forSide ? forOdds : againstOdds))} VT
+              {(() => {
+                const odds = selectedSide === forSide ? forOdds : againstOdds;
+                if (odds === "TBD") return "Potential payout: TBD (first bet on this side)";
+                return `Potential payout: ~${Math.round(parseInt(betAmount) * parseFloat(odds))} VT`;
+              })()}
             </p>
           )}
         </div>

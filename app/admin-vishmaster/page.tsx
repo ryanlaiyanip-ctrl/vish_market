@@ -85,6 +85,13 @@ export default function AdminPage() {
     fetchLeaderboard();
   }
 
+  async function resetMarket(id: string) {
+    if (!confirm("Reset this market? All bets will be refunded and it reopens at 0.")) return;
+    await fetch(`/api/markets/${id}/reset`, { method: "POST" });
+    fetchMarkets();
+    fetchLeaderboard();
+  }
+
   const openMarkets = markets.filter((m) => m.status === "open");
   const closedMarkets = markets.filter((m) => m.status === "closed");
   const resolvedMarkets = markets.filter((m) => m.status === "resolved");
@@ -199,7 +206,7 @@ export default function AdminPage() {
               <section className="space-y-3">
                 <h2 className="text-gray-400 font-semibold text-sm uppercase tracking-wider">Open Markets</h2>
                 {openMarkets.map((m) => (
-                  <AdminMarketCard key={m.id} market={m} onUpdate={updateMarket} onDelete={deleteMarket} />
+                  <AdminMarketCard key={m.id} market={m} onUpdate={updateMarket} onDelete={deleteMarket} onReset={resetMarket} />
                 ))}
               </section>
             )}
@@ -208,7 +215,7 @@ export default function AdminPage() {
               <section className="space-y-3">
                 <h2 className="text-gray-400 font-semibold text-sm uppercase tracking-wider">Closed — Awaiting Resolution</h2>
                 {closedMarkets.map((m) => (
-                  <AdminMarketCard key={m.id} market={m} onUpdate={updateMarket} onDelete={deleteMarket} />
+                  <AdminMarketCard key={m.id} market={m} onUpdate={updateMarket} onDelete={deleteMarket} onReset={resetMarket} />
                 ))}
               </section>
             )}
@@ -217,7 +224,7 @@ export default function AdminPage() {
               <section className="space-y-3">
                 <h2 className="text-gray-400 font-semibold text-sm uppercase tracking-wider">Resolved</h2>
                 {resolvedMarkets.map((m) => (
-                  <AdminMarketCard key={m.id} market={m} onUpdate={updateMarket} onDelete={deleteMarket} />
+                  <AdminMarketCard key={m.id} market={m} onUpdate={updateMarket} onDelete={deleteMarket} onReset={resetMarket} />
                 ))}
               </section>
             )}
@@ -236,10 +243,12 @@ function AdminMarketCard({
   market,
   onUpdate,
   onDelete,
+  onReset,
 }: {
   market: Market;
   onUpdate: (id: string, patch: object) => void;
   onDelete: (id: string) => void;
+  onReset: (id: string) => void;
 }) {
   const [inputVal, setInputVal] = useState(String(market.current_value));
 
@@ -269,12 +278,20 @@ function AdminMarketCard({
         <div className="flex items-center gap-2">
           <span className={`text-xs font-bold uppercase ${statusColor}`}>{market.status}</span>
           {market.status !== "resolved" && (
-            <button
-              onClick={() => onDelete(market.id)}
-              className="text-gray-600 hover:text-red-400 transition-colors text-xs px-2 py-1 rounded-lg hover:bg-red-900/20"
-            >
-              Delete
-            </button>
+            <div className="flex gap-1">
+              <button
+                onClick={() => onReset(market.id)}
+                className="text-gray-600 hover:text-orange-400 transition-colors text-xs px-2 py-1 rounded-lg hover:bg-orange-900/20"
+              >
+                Reset
+              </button>
+              <button
+                onClick={() => onDelete(market.id)}
+                className="text-gray-600 hover:text-red-400 transition-colors text-xs px-2 py-1 rounded-lg hover:bg-red-900/20"
+              >
+                Delete
+              </button>
+            </div>
           )}
         </div>
       </div>
