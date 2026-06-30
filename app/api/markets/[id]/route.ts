@@ -22,6 +22,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     let finalResult = result;
     if (market.type === "over_under") {
       const val = Number(current_value !== undefined ? current_value : market.current_value);
+      // Exact tie goes to "under" (line not exceeded)
       finalResult = val > Number(market.line) ? "over" : "under";
     }
 
