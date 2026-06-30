@@ -15,8 +15,18 @@ interface Market {
   total_bets: number;
 }
 
+interface LeaderboardEntry {
+  id: string;
+  nickname: string;
+  balance: number;
+}
+
+type AdminTab = "markets" | "players";
+
 export default function AdminPage() {
   const [markets, setMarkets] = useState<Market[]>([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [tab, setTab] = useState<AdminTab>("markets");
   const [title, setTitle] = useState("");
   const [type, setType] = useState<"yes_no" | "over_under">("yes_no");
   const [line, setLine] = useState("");
@@ -28,12 +38,18 @@ export default function AdminPage() {
     if (res.ok) setMarkets(await res.json());
   }, []);
 
+  const fetchLeaderboard = useCallback(async () => {
+    const res = await fetch("/api/users/leaderboard");
+    if (res.ok) setLeaderboard(await res.json());
+  }, []);
+
   useEffect(() => {
     fetchMarkets();
+    fetchLeaderboard();
     const es = new EventSource("/api/events");
-    es.onmessage = () => fetchMarkets();
+    es.onmessage = () => { fetchMarkets(); fetchLeaderboard(); };
     return () => es.close();
-  }, [fetchMarkets]);
+  }, [fetchMarkets, fetchLeaderboard]);
 
   async function createMarket() {
     if (!title.trim()) return;
@@ -59,6 +75,14 @@ export default function AdminPage() {
       body: JSON.stringify(patch),
     });
     fetchMarkets();
+    fetchLeaderboard();
+  }
+
+  async function deleteMarket(id: string) {
+    if (!confirm("Delete this market? All bets will be refunded.")) return;
+    await fetch(`/api/markets/${id}`, { method: "DELETE" });
+    fetchMarkets();
+    fetchLeaderboard();
   }
 
   const openMarkets = markets.filter((m) => m.status === "open");
@@ -69,94 +93,139 @@ export default function AdminPage() {
     <main className="min-h-screen bg-gray-950 text-white">
       <header className="sticky top-0 z-10 bg-gray-950/80 backdrop-blur border-b border-gray-800 px-4 py-3">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <div>
-            <div className="font-black text-lg tracking-tight">
-              VISH<span className="text-blue-500">MARKET</span>
-              <span className="ml-2 text-xs font-normal text-purple-400 bg-purple-900/40 border border-purple-500/30 px-2 py-0.5 rounded-full">ADMIN</span>
-            </div>
+          <div className="font-black text-lg tracking-tight">
+            VISH<span className="text-blue-500">MARKET</span>
+            <span className="ml-2 text-xs font-normal text-purple-400 bg-purple-900/40 border border-purple-500/30 px-2 py-0.5 rounded-full">ADMIN</span>
           </div>
-          <div className="text-gray-400 text-xs">{markets.length} markets total</div>
+          <div className="text-gray-400 text-xs">{leaderboard.length} players · {markets.length} markets</div>
         </div>
       </header>
 
-      <div className="max-w-3xl mx-auto p-4 space-y-6">
-        {/* Create market */}
-        <div className="bg-gray-900 border border-gray-700 rounded-2xl p-5 space-y-4">
-          <h2 className="font-bold text-white">Create Market</h2>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && createMarket()}
-            placeholder="e.g. Will he say Synergy? or How many times says Lets Go"
-            className="w-full bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-          />
-          <div className="flex gap-3">
-            <div className="flex gap-2">
-              {(["yes_no", "over_under"] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setType(t)}
-                  className={`px-4 py-2 rounded-xl font-medium text-sm transition-colors ${
-                    type === t ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-                  }`}
-                >
-                  {t === "yes_no" ? "Yes / No" : "Over / Under"}
-                </button>
-              ))}
-            </div>
-            {type === "over_under" && (
-              <input
-                type="number"
-                value={line}
-                onChange={(e) => setLine(e.target.value)}
-                placeholder="Line (e.g. 3.5)"
-                className="flex-1 bg-gray-800 border border-gray-600 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-              />
-            )}
-          </div>
-          {error && <p className="text-red-400 text-sm">{error}</p>}
-          <button
-            onClick={createMarket}
-            disabled={creating || !title.trim()}
-            className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-bold py-3 rounded-xl transition-colors"
-          >
-            {creating ? "Creating..." : "Create Market"}
-          </button>
+      {/* Tabs */}
+      <div className="border-b border-gray-800">
+        <div className="max-w-3xl mx-auto flex">
+          {([["markets", "Markets"], ["players", `Players (${leaderboard.length})`]] as [AdminTab, string][]).map(([t, label]) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+                tab === t ? "border-blue-500 text-white" : "border-transparent text-gray-500 hover:text-gray-300"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
+      </div>
 
-        {/* Open markets */}
-        {openMarkets.length > 0 && (
-          <section className="space-y-3">
-            <h2 className="text-gray-400 font-semibold text-sm uppercase tracking-wider">Open Markets</h2>
-            {openMarkets.map((m) => (
-              <AdminMarketCard key={m.id} market={m} onUpdate={updateMarket} />
-            ))}
+      <div className="max-w-3xl mx-auto p-4 space-y-6">
+
+        {/* PLAYERS TAB */}
+        {tab === "players" && (
+          <section className="space-y-2">
+            <h2 className="text-gray-400 font-semibold text-sm uppercase tracking-wider">All Players</h2>
+            {leaderboard.length === 0 ? (
+              <div className="text-center py-16 text-gray-600">No players yet</div>
+            ) : (
+              leaderboard.map((entry, i) => (
+                <div key={entry.id} className="flex items-center gap-4 px-4 py-3 rounded-xl bg-gray-900 border border-gray-800">
+                  <div className={`w-8 text-center font-black text-lg ${
+                    i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-600" : "text-gray-600"
+                  }`}>
+                    {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}
+                  </div>
+                  <div className="flex-1 font-medium text-white">{entry.nickname}</div>
+                  <div className="font-bold text-white">{Number(entry.balance).toLocaleString()} VT</div>
+                  <div className={`text-xs font-medium w-16 text-right ${
+                    entry.balance > 1000 ? "text-green-400" : entry.balance < 1000 ? "text-red-400" : "text-gray-500"
+                  }`}>
+                    {entry.balance > 1000 ? `+${entry.balance - 1000}` : entry.balance < 1000 ? `${entry.balance - 1000}` : "even"}
+                  </div>
+                </div>
+              ))
+            )}
           </section>
         )}
 
-        {/* Closed markets */}
-        {closedMarkets.length > 0 && (
-          <section className="space-y-3">
-            <h2 className="text-gray-400 font-semibold text-sm uppercase tracking-wider">Closed — Awaiting Resolution</h2>
-            {closedMarkets.map((m) => (
-              <AdminMarketCard key={m.id} market={m} onUpdate={updateMarket} />
-            ))}
-          </section>
-        )}
+        {/* MARKETS TAB */}
+        {tab === "markets" && (
+          <>
+            {/* Create market */}
+            <div className="bg-gray-900 border border-gray-700 rounded-2xl p-5 space-y-4">
+              <h2 className="font-bold text-white">Create Market</h2>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && createMarket()}
+                placeholder='e.g. "Will he say Synergy?" or "Times he says Lets Go"'
+                className="w-full bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+              />
+              <div className="flex gap-3 flex-wrap">
+                <div className="flex gap-2">
+                  {(["yes_no", "over_under"] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setType(t)}
+                      className={`px-4 py-2 rounded-xl font-medium text-sm transition-colors ${
+                        type === t ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+                      }`}
+                    >
+                      {t === "yes_no" ? "Yes / No" : "Over / Under"}
+                    </button>
+                  ))}
+                </div>
+                {type === "over_under" && (
+                  <input
+                    type="number"
+                    value={line}
+                    onChange={(e) => setLine(e.target.value)}
+                    placeholder="Line (e.g. 3.5)"
+                    className="flex-1 min-w-[120px] bg-gray-800 border border-gray-600 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                  />
+                )}
+              </div>
+              {error && <p className="text-red-400 text-sm">{error}</p>}
+              <button
+                onClick={createMarket}
+                disabled={creating || !title.trim()}
+                className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-bold py-3 rounded-xl transition-colors"
+              >
+                {creating ? "Creating..." : "Create Market"}
+              </button>
+            </div>
 
-        {/* Resolved */}
-        {resolvedMarkets.length > 0 && (
-          <section className="space-y-3">
-            <h2 className="text-gray-400 font-semibold text-sm uppercase tracking-wider">Resolved</h2>
-            {resolvedMarkets.map((m) => (
-              <AdminMarketCard key={m.id} market={m} onUpdate={updateMarket} />
-            ))}
-          </section>
-        )}
+            {openMarkets.length > 0 && (
+              <section className="space-y-3">
+                <h2 className="text-gray-400 font-semibold text-sm uppercase tracking-wider">Open Markets</h2>
+                {openMarkets.map((m) => (
+                  <AdminMarketCard key={m.id} market={m} onUpdate={updateMarket} onDelete={deleteMarket} />
+                ))}
+              </section>
+            )}
 
-        {markets.length === 0 && (
-          <div className="text-center py-16 text-gray-600">Create your first market above</div>
+            {closedMarkets.length > 0 && (
+              <section className="space-y-3">
+                <h2 className="text-gray-400 font-semibold text-sm uppercase tracking-wider">Closed — Awaiting Resolution</h2>
+                {closedMarkets.map((m) => (
+                  <AdminMarketCard key={m.id} market={m} onUpdate={updateMarket} onDelete={deleteMarket} />
+                ))}
+              </section>
+            )}
+
+            {resolvedMarkets.length > 0 && (
+              <section className="space-y-3">
+                <h2 className="text-gray-400 font-semibold text-sm uppercase tracking-wider">Resolved</h2>
+                {resolvedMarkets.map((m) => (
+                  <AdminMarketCard key={m.id} market={m} onUpdate={updateMarket} onDelete={deleteMarket} />
+                ))}
+              </section>
+            )}
+
+            {markets.length === 0 && (
+              <div className="text-center py-16 text-gray-600">Create your first market above</div>
+            )}
+          </>
         )}
       </div>
     </main>
@@ -166,11 +235,17 @@ export default function AdminPage() {
 function AdminMarketCard({
   market,
   onUpdate,
+  onDelete,
 }: {
   market: Market;
   onUpdate: (id: string, patch: object) => void;
+  onDelete: (id: string) => void;
 }) {
   const [inputVal, setInputVal] = useState(String(market.current_value));
+
+  useEffect(() => {
+    setInputVal(String(market.current_value));
+  }, [market.current_value]);
 
   const forLabel = market.type === "yes_no" ? "YES" : "OVER";
   const againstLabel = market.type === "yes_no" ? "NO" : "UNDER";
@@ -191,7 +266,17 @@ function AdminMarketCard({
             <p className="text-gray-400 text-sm mt-0.5">Line: <span className="text-white">{market.line}</span></p>
           )}
         </div>
-        <span className={`text-xs font-bold uppercase ${statusColor}`}>{market.status}</span>
+        <div className="flex items-center gap-2">
+          <span className={`text-xs font-bold uppercase ${statusColor}`}>{market.status}</span>
+          {market.status !== "resolved" && (
+            <button
+              onClick={() => onDelete(market.id)}
+              className="text-gray-600 hover:text-red-400 transition-colors text-xs px-2 py-1 rounded-lg hover:bg-red-900/20"
+            >
+              Delete
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Pools */}
@@ -238,7 +323,6 @@ function AdminMarketCard({
         </div>
       )}
 
-      {/* Actions */}
       {market.status === "open" && (
         <button
           onClick={() => onUpdate(market.id, { status: "closed" })}

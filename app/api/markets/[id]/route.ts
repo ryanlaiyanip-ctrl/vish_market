@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import sql, { initDb } from "@/lib/db";
 
-// PATCH: update current_value, status, or resolve
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   await initDb();
   const { id } = await params;
@@ -14,15 +13,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (current_value !== undefined) {
     await sql`UPDATE markets SET current_value = ${current_value} WHERE id = ${id}`;
   }
-  if (status) {
+  if (status && status !== "resolved") {
     await sql`UPDATE markets SET status = ${status} WHERE id = ${id}`;
   }
 
-  // Resolve and settle bets
   if (result && status === "resolved") {
     await sql`UPDATE markets SET result = ${result}, status = 'resolved' WHERE id = ${id}`;
 
-    // Get all unsettled bets
     const bets = await sql`SELECT * FROM bets WHERE market_id = ${id} AND settled = FALSE`;
     const winningBets = bets.filter((b) => b.side === result);
     const losingBets = bets.filter((b) => b.side !== result);
@@ -53,4 +50,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     GROUP BY m.id
   `;
   return NextResponse.json(updated);
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  await initDb();
+  const { id } = await params;
+  const [market] = await sql`SELECT * FROM markets WHERE id = ${id}`;
+  if (!market) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Refund all unsettled bets before deleting
+  const bets = await sql`SELECT * FROM bets WHERE market_id = ${id} AND settled = FALSE`;
+  for (const bet of bets) {
+    await sql`UPDATE users SET balance = balance + ${bet.amount} WHERE id = ${bet.user_id}`;
+    await sql`UPDATE bets SET payout = ${bet.amount}, settled = TRUE WHERE id = ${bet.id}`;
+  }
+  await sql`DELETE FROM markets WHERE id = ${id}`;
+  return NextResponse.json({ ok: true });
 }
