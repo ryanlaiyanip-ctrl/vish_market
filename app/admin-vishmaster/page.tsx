@@ -85,6 +85,14 @@ export default function AdminPage() {
     fetchLeaderboard();
   }
 
+  async function wipeEverything() {
+    if (!confirm("Wipe ALL users, markets, and bets? This cannot be undone.")) return;
+    if (!confirm("Are you absolutely sure? Everything will be deleted.")) return;
+    await fetch("/api/admin/wipe", { method: "POST" });
+    fetchMarkets();
+    fetchLeaderboard();
+  }
+
   async function deleteUser(id: string, nickname: string) {
     if (!confirm(`Delete ${nickname}? Their bets will be removed.`)) return;
     // Optimistically remove from UI immediately
@@ -113,7 +121,16 @@ export default function AdminPage() {
             <span style={{ color: "#c9a227" }}>VISH</span><span style={{ color: "white" }}>MARKET</span>
             <span className="ml-2 text-xs font-normal px-2 py-0.5 rounded-full" style={{ color: "#a78bfa", background: "rgba(124,58,237,0.2)", border: "1px solid rgba(124,58,237,0.3)" }}>ADMIN</span>
           </div>
-          <div className="text-xs" style={{ color: "#6b7280" }}>{leaderboard.length} players · {markets.length} markets</div>
+          <div className="flex items-center gap-3">
+            <div className="text-xs" style={{ color: "#6b7280" }}>{leaderboard.length} players · {markets.length} markets</div>
+            <button
+              onClick={wipeEverything}
+              className="text-xs px-3 py-1 rounded-lg font-medium transition-colors"
+              style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171" }}
+            >
+              Wipe All
+            </button>
+          </div>
         </div>
       </header>
 
