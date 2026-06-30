@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import VishToken from "./VishToken";
 
 interface Market {
   id: string;
@@ -74,64 +75,74 @@ export default function MarketCard({ market, userId, userBalance, userBets, onBe
     setSelectedSide(null);
   }
 
-  const statusColor =
-    market.status === "open" ? "bg-green-500/20 text-green-400 border border-green-500/30" :
-    market.status === "closed" ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30" :
-    "bg-purple-500/20 text-purple-400 border border-purple-500/30";
+  const statusStyle =
+    market.status === "open"
+      ? { background: "rgba(34,197,94,0.1)", color: "#4ade80", border: "1px solid rgba(34,197,94,0.25)" }
+      : market.status === "closed"
+      ? { background: "rgba(234,179,8,0.1)", color: "#facc15", border: "1px solid rgba(234,179,8,0.25)" }
+      : { background: "rgba(124,58,237,0.1)", color: "#a78bfa", border: "1px solid rgba(124,58,237,0.25)" };
 
   return (
-    <div className="bg-gray-900 border border-gray-700 rounded-2xl p-5 space-y-4">
+    <div style={{ background: "#12121a", border: "1px solid #2a2a3a" }} className="rounded-2xl p-5 space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-white font-semibold text-lg leading-tight">{market.title}</h3>
           {market.type === "over_under" && market.line !== null && (
-            <p className="text-gray-400 text-sm mt-0.5">Line: <span className="text-white font-medium">{market.line}</span></p>
+            <p className="text-sm mt-0.5" style={{ color: "#6b7280" }}>
+              Line: <span className="text-white font-medium">{market.line}</span>
+            </p>
           )}
         </div>
-        <span className={`text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap ${statusColor}`}>
+        <span className="text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap" style={statusStyle}>
           {market.status.toUpperCase()}
         </span>
       </div>
 
       {market.type === "over_under" && (
-        <div className="bg-gray-800 rounded-xl px-4 py-2 flex items-center justify-between">
-          <span className="text-gray-400 text-sm">Current count</span>
-          <span className="text-2xl font-bold text-white">{market.current_value}</span>
+        <div className="rounded-xl px-4 py-2 flex items-center justify-between" style={{ background: "#1a1a26" }}>
+          <span style={{ color: "#6b7280" }} className="text-sm">Current count</span>
+          <span className="text-2xl font-black" style={{ color: "#c9a227" }}>{market.current_value}</span>
         </div>
       )}
 
       {market.status === "resolved" && market.result && (
-        <div className="bg-purple-900/40 border border-purple-500/30 rounded-xl px-4 py-2 text-center">
-          <span className="text-purple-300 font-bold text-sm">Result: {market.result.toUpperCase()}</span>
+        <div className="rounded-xl px-4 py-2 text-center" style={{ background: "rgba(124,58,237,0.15)", border: "1px solid rgba(124,58,237,0.3)" }}>
+          <span className="font-bold text-sm" style={{ color: "#a78bfa" }}>Result: {market.result.toUpperCase()}</span>
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-3">
-        {[{ side: forSide, label: forLabel, odds: forOdds, pool: market.pool_for },
-          { side: againstSide, label: againstLabel, odds: againstOdds, pool: market.pool_against }].map(({ side, label, odds, pool }) => (
+        {[
+          { side: forSide, label: forLabel, odds: forOdds, pool: market.pool_for },
+          { side: againstSide, label: againstLabel, odds: againstOdds, pool: market.pool_against },
+        ].map(({ side, label, odds, pool }) => (
           <button
             key={side}
             onClick={() => market.status === "open" && !myBet && setSelectedSide(side === selectedSide ? null : side)}
             disabled={market.status !== "open" || !!myBet}
-            className={`rounded-xl p-3 border-2 transition-all text-left ${
-              selectedSide === side
-                ? "border-blue-500 bg-blue-500/20"
-                : "border-gray-700 bg-gray-800 hover:border-gray-500"
-            } ${(market.status !== "open" || myBet) ? "opacity-60 cursor-default" : "cursor-pointer"}`}
+            className="rounded-xl p-3 text-left transition-all"
+            style={{
+              background: selectedSide === side ? "rgba(124,58,237,0.2)" : "#1a1a26",
+              border: selectedSide === side ? "2px solid #7c3aed" : "2px solid #2a2a3a",
+              cursor: market.status !== "open" || myBet ? "default" : "pointer",
+              opacity: market.status !== "open" || myBet ? 0.6 : 1,
+            }}
           >
             <div className="font-bold text-white">{label}</div>
-            <div className="text-blue-400 font-mono text-lg">{odds}x</div>
-            <div className="text-gray-400 text-xs">{Number(pool).toLocaleString()} VT</div>
+            <div className="font-mono text-lg font-black" style={{ color: "#c9a227" }}>{odds}{odds !== "TBD" && "x"}</div>
+            <div className="text-xs flex items-center gap-1 mt-0.5" style={{ color: "#6b7280" }}>
+              <VishToken size={12} /> {Number(pool).toLocaleString()} VT
+            </div>
           </button>
         ))}
       </div>
 
       {myBet && (
-        <div className="bg-gray-800 rounded-xl px-4 py-2.5 text-sm">
-          <span className="text-gray-400">Your bet: </span>
-          <span className="text-white font-semibold">{myBet.amount} VT on {myBet.side.toUpperCase()}</span>
+        <div className="rounded-xl px-4 py-2.5 text-sm" style={{ background: "#1a1a26" }}>
+          <span style={{ color: "#6b7280" }}>Your bet: </span>
+          <span className="font-semibold text-white">{myBet.amount} VT on {myBet.side.toUpperCase()}</span>
           {myBet.settled && (
-            <span className={`ml-2 font-bold ${myBet.payout && myBet.payout > 0 ? "text-green-400" : "text-red-400"}`}>
+            <span className="ml-2 font-bold" style={{ color: myBet.payout && myBet.payout > 0 ? "#4ade80" : "#f87171" }}>
               {myBet.payout && myBet.payout > 0 ? `+${myBet.payout} VT` : "Lost"}
             </span>
           )}
@@ -148,19 +159,21 @@ export default function MarketCard({ market, userId, userBalance, userBets, onBe
               value={betAmount}
               onChange={(e) => setBetAmount(e.target.value)}
               placeholder="Amount (VT)"
-              className="flex-1 bg-gray-800 border border-gray-600 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+              style={{ background: "#1a1a26", border: "1px solid #2a2a3a", color: "white" }}
+              className="flex-1 rounded-xl px-4 py-2 placeholder-gray-600 focus:outline-none"
             />
             <button
               onClick={placeBet}
               disabled={loading}
-              className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold px-5 py-2 rounded-xl transition-colors"
+              style={{ background: "linear-gradient(135deg, #7c3aed, #c9a227)" }}
+              className="text-white font-black px-5 py-2 rounded-xl transition-opacity disabled:opacity-50"
             >
               {loading ? "..." : "Bet"}
             </button>
           </div>
           {error && <p className="text-red-400 text-sm">{error}</p>}
           {betAmount && !isNaN(parseInt(betAmount)) && (
-            <p className="text-gray-400 text-xs">
+            <p className="text-xs" style={{ color: "#6b7280" }}>
               {(() => {
                 const odds = selectedSide === forSide ? forOdds : againstOdds;
                 if (odds === "TBD") return "Potential payout: TBD (first bet on this side)";
