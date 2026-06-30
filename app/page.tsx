@@ -238,44 +238,79 @@ export default function Home() {
         )}
 
         {tab === "bets" && (
-          <section className="space-y-3">
-            {activeBets.length === 0 ? (
-              <div className="text-center py-16" style={{ color: "#4b5563" }}>No active bets yet</div>
-            ) : (
-              activeBets.map((bet) => {
-                const market = markets.find((m) => m.id === bet.market_id);
-                const poolFor = Number(market?.pool_for ?? 0);
-                const poolAgainst = Number(market?.pool_against ?? 0);
-                const total = poolFor + poolAgainst;
-                const isFor = bet.side === "yes" || bet.side === "over";
-                const myPool = isFor ? poolFor : poolAgainst;
-                const odds = total === 0 || myPool === 0 ? null : total / myPool;
-                const potentialPayout = odds ? Math.round(bet.amount * odds) : null;
+          <section className="space-y-4">
+            {userBets.length === 0 && (
+              <div className="text-center py-16" style={{ color: "#4b5563" }}>No bets yet</div>
+            )}
 
-                return (
-                  <div key={bet.id} style={{ background: "#12121a", border: "1px solid #2a2a3a" }} className="rounded-2xl p-4 space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="font-medium text-white">{bet.title}</p>
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap" style={{
-                        background: bet.status === "open" ? "rgba(34,197,94,0.15)" : bet.status === "closed" ? "rgba(234,179,8,0.15)" : "rgba(124,58,237,0.15)",
-                        color: bet.status === "open" ? "#4ade80" : bet.status === "closed" ? "#facc15" : "#a78bfa",
-                      }}>{bet.status.toUpperCase()}</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-sm flex-wrap">
-                      <span className="font-bold px-2 py-0.5 rounded-lg" style={{ background: "rgba(124,58,237,0.2)", color: "#a78bfa" }}>{bet.side.toUpperCase()}</span>
-                      <span style={{ color: "#9ca3af" }} className="flex items-center gap-1">
-                        <VishToken size={14} /> {bet.amount} VT staked
-                      </span>
-                      {potentialPayout && (
-                        <span style={{ color: "#6b7280" }}>→ ~{potentialPayout} VT if win</span>
+            {activeBets.length > 0 && (
+              <div className="space-y-3">
+                <h2 className="font-semibold text-xs uppercase tracking-wider" style={{ color: "#6b7280" }}>Active Bets</h2>
+                {activeBets.map((bet) => {
+                  const market = markets.find((m) => m.id === bet.market_id);
+                  const poolFor = Number(market?.pool_for ?? 0);
+                  const poolAgainst = Number(market?.pool_against ?? 0);
+                  const total = poolFor + poolAgainst;
+                  const isFor = bet.side === "yes" || bet.side === "over";
+                  const myPool = isFor ? poolFor : poolAgainst;
+                  const odds = total === 0 || myPool === 0 ? null : total / myPool;
+                  const potentialPayout = odds ? Math.round(bet.amount * odds) : null;
+
+                  return (
+                    <div key={bet.id} style={{ background: "#12121a", border: "1px solid #2a2a3a" }} className="rounded-2xl p-4 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-medium text-white">{bet.title}</p>
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap" style={{
+                          background: bet.status === "open" ? "rgba(34,197,94,0.15)" : "rgba(234,179,8,0.15)",
+                          color: bet.status === "open" ? "#4ade80" : "#facc15",
+                        }}>{bet.status.toUpperCase()}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-sm flex-wrap">
+                        <span className="font-bold px-2 py-0.5 rounded-lg" style={{ background: "rgba(124,58,237,0.2)", color: "#a78bfa" }}>{bet.side.toUpperCase()}</span>
+                        <span style={{ color: "#9ca3af" }} className="flex items-center gap-1">
+                          <VishToken size={14} /> {bet.amount} VT staked
+                        </span>
+                        {potentialPayout && <span style={{ color: "#6b7280" }}>→ ~{potentialPayout} VT if win</span>}
+                      </div>
+                      {bet.type === "over_under" && market && (
+                        <div className="text-xs" style={{ color: "#6b7280" }}>Line: {bet.line} · Current: {market.current_value}</div>
                       )}
                     </div>
-                    {bet.type === "over_under" && market && (
-                      <div className="text-xs" style={{ color: "#6b7280" }}>Line: {bet.line} · Current: {market.current_value}</div>
-                    )}
-                  </div>
-                );
-              })
+                  );
+                })}
+              </div>
+            )}
+
+            {userBets.filter((b) => b.settled).length > 0 && (
+              <div className="space-y-3">
+                <h2 className="font-semibold text-xs uppercase tracking-wider" style={{ color: "#6b7280" }}>Previous Bets</h2>
+                {userBets.filter((b) => b.settled).map((bet) => {
+                  const won = bet.payout && bet.payout > 0;
+                  return (
+                    <div key={bet.id} style={{ background: "#12121a", border: `1px solid ${won ? "rgba(74,222,128,0.2)" : "rgba(248,113,113,0.2)"}` }} className="rounded-2xl p-4 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-medium text-white">{bet.title}</p>
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{
+                          background: won ? "rgba(74,222,128,0.15)" : "rgba(248,113,113,0.15)",
+                          color: won ? "#4ade80" : "#f87171",
+                        }}>{won ? "WON" : "LOST"}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-sm flex-wrap">
+                        <span className="font-bold px-2 py-0.5 rounded-lg" style={{ background: "rgba(124,58,237,0.2)", color: "#a78bfa" }}>{bet.side.toUpperCase()}</span>
+                        <span style={{ color: "#9ca3af" }} className="flex items-center gap-1">
+                          <VishToken size={14} /> {bet.amount} VT staked
+                        </span>
+                        <span className="font-bold flex items-center gap-1" style={{ color: won ? "#4ade80" : "#f87171" }}>
+                          {won ? `+${bet.payout} VT` : "-" + bet.amount + " VT"}
+                        </span>
+                      </div>
+                      {bet.result && (
+                        <div className="text-xs" style={{ color: "#6b7280" }}>Result: {bet.result.toUpperCase()}</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </section>
         )}

@@ -87,6 +87,8 @@ export default function AdminPage() {
 
   async function deleteUser(id: string, nickname: string) {
     if (!confirm(`Delete ${nickname}? Their bets will be removed.`)) return;
+    // Optimistically remove from UI immediately
+    setLeaderboard((prev) => prev.filter((u) => u.id !== id));
     await fetch(`/api/users/${id}`, { method: "DELETE" });
     fetchLeaderboard();
   }
