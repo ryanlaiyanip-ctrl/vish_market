@@ -47,9 +47,8 @@ export default function AdminPage() {
   useEffect(() => {
     fetchMarkets();
     fetchLeaderboard();
-    const es = new EventSource("/api/events");
-    es.onmessage = () => { fetchMarkets(); fetchLeaderboard(); };
-    return () => es.close();
+    const interval = setInterval(() => { fetchMarkets(); fetchLeaderboard(); }, 3000);
+    return () => clearInterval(interval);
   }, [fetchMarkets, fetchLeaderboard]);
 
   async function createMarket() {
@@ -365,22 +364,32 @@ function AdminMarketCard({
       {(market.status === "open" || market.status === "closed") && (
         <div className="space-y-2">
           <div className="text-sm" style={{ color: "#6b7280" }}>Resolve</div>
-          <div className="flex gap-2">
+          {market.type === "over_under" ? (
             <button
-              onClick={() => onUpdate(market.id, { status: "resolved", result: forSide })}
-              className="flex-1 font-bold py-2.5 rounded-xl text-sm transition-opacity"
-              style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", color: "#4ade80" }}
+              onClick={() => onUpdate(market.id, { status: "resolved" })}
+              className="w-full font-bold py-2.5 rounded-xl text-sm transition-opacity"
+              style={{ background: "rgba(201,162,39,0.1)", border: "1px solid rgba(201,162,39,0.3)", color: "#c9a227" }}
             >
-              {forLabel} wins
+              Resolve (auto: {Number(market.current_value) > Number(market.line) ? "OVER" : "UNDER"} wins at {market.current_value})
             </button>
-            <button
-              onClick={() => onUpdate(market.id, { status: "resolved", result: againstSide })}
-              className="flex-1 font-bold py-2.5 rounded-xl text-sm transition-opacity"
-              style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171" }}
-            >
-              {againstLabel} wins
-            </button>
-          </div>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={() => onUpdate(market.id, { status: "resolved", result: forSide })}
+                className="flex-1 font-bold py-2.5 rounded-xl text-sm transition-opacity"
+                style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", color: "#4ade80" }}
+              >
+                YES wins
+              </button>
+              <button
+                onClick={() => onUpdate(market.id, { status: "resolved", result: againstSide })}
+                className="flex-1 font-bold py-2.5 rounded-xl text-sm transition-opacity"
+                style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171" }}
+              >
+                NO wins
+              </button>
+            </div>
+          )}
         </div>
       )}
 

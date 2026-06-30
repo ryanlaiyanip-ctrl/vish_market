@@ -17,12 +17,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     await sql`UPDATE markets SET status = ${status} WHERE id = ${id}`;
   }
 
-  if (result && status === "resolved") {
-    await sql`UPDATE markets SET result = ${result}, status = 'resolved' WHERE id = ${id}`;
+  if (status === "resolved") {
+    // For over/under, auto-calculate result from line vs current_value
+    let finalResult = result;
+    if (market.type === "over_under") {
+      const val = Number(current_value !== undefined ? current_value : market.current_value);
+      finalResult = val > Number(market.line) ? "over" : "under";
+    }
+
+    await sql`UPDATE markets SET result = ${finalResult}, status = 'resolved' WHERE id = ${id}`;
 
     const bets = await sql`SELECT * FROM bets WHERE market_id = ${id} AND settled = FALSE`;
-    const winningBets = bets.filter((b) => b.side === result);
-    const losingBets = bets.filter((b) => b.side !== result);
+    const winningBets = bets.filter((b) => b.side === finalResult);
+    const losingBets = bets.filter((b) => b.side !== finalResult);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const totalLosingPool = losingBets.reduce((s: number, b: any) => s + Number(b.amount), 0);
@@ -43,7 +50,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const [updated] = await sql`
     SELECT m.*,
       COALESCE(SUM(CASE WHEN b.side = 'yes' OR b.side = 'over' THEN b.amount ELSE 0 END), 0) AS pool_for,
-      COALESCE(SUM(CASE WHEN b.side = 'no' OR b.side = 'under' THEN b.amount ELSE 0 END), 0) AS pool_against
+      COALESCE(SUM(CASE WHEN b.side = 'no' OR b.side = 'under' THEN b.amount ELSE 0 END), 0) AS pool_against,
+      COUNT(b.id) AS total_bets
     FROM markets m
     LEFT JOIN bets b ON b.market_id = m.id
     WHERE m.id = ${id}
@@ -58,7 +66,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const [market] = await sql`SELECT * FROM markets WHERE id = ${id}`;
   if (!market) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Refund all unsettled bets before deleting
   const bets = await sql`SELECT * FROM bets WHERE market_id = ${id} AND settled = FALSE`;
   for (const bet of bets) {
     await sql`UPDATE users SET balance = balance + ${bet.amount} WHERE id = ${bet.user_id}`;

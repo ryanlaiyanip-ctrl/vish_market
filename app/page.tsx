@@ -86,14 +86,13 @@ export default function Home() {
     if (!user) return;
     fetchBets(user.id);
     fetchLeaderboard();
-    const es = new EventSource("/api/events");
-    es.onmessage = () => {
+    const interval = setInterval(() => {
       fetchMarkets();
       fetchBets(user.id);
       fetchUser(user.id);
       fetchLeaderboard();
-    };
-    return () => es.close();
+    }, 3000);
+    return () => clearInterval(interval);
   }, [user, fetchBets, fetchMarkets, fetchUser, fetchLeaderboard]);
 
   async function join() {
