@@ -85,6 +85,12 @@ export default function AdminPage() {
     fetchLeaderboard();
   }
 
+  async function deleteUser(id: string, nickname: string) {
+    if (!confirm(`Delete ${nickname}? Their bets will be removed.`)) return;
+    await fetch(`/api/users/${id}`, { method: "DELETE" });
+    fetchLeaderboard();
+  }
+
   async function resetMarket(id: string) {
     if (!confirm("Reset this market? All bets will be refunded and it reopens at 0.")) return;
     if (!confirm("Are you sure? This cannot be undone — all bets will be refunded.")) return;
@@ -148,6 +154,15 @@ export default function AdminPage() {
                   <div className="text-xs font-medium w-14 text-right" style={{ color: entry.balance > 1000 ? "#4ade80" : entry.balance < 1000 ? "#f87171" : "#6b7280" }}>
                     {entry.balance > 1000 ? `+${entry.balance - 1000}` : entry.balance < 1000 ? `${entry.balance - 1000}` : "even"}
                   </div>
+                  <button
+                    onClick={() => deleteUser(entry.id, entry.nickname)}
+                    className="text-xs px-2 py-1 rounded-lg transition-colors"
+                    style={{ color: "#6b7280" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "#f87171")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "#6b7280")}
+                  >
+                    ✕
+                  </button>
                 </div>
               ))
             )}
