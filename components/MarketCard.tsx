@@ -58,6 +58,7 @@ export default function MarketCard({ market, userId, userBalance, userBets, onBe
     if (!selectedSide || !betAmount) return;
     const amount = parseInt(betAmount);
     if (isNaN(amount) || amount < 1) { setError("Enter a valid amount"); return; }
+    if (amount > 400) { setError("Max bet is 400 VT"); return; }
     if (amount > userBalance) { setError("Not enough Vish tokens"); return; }
 
     setLoading(true);
@@ -155,7 +156,7 @@ export default function MarketCard({ market, userId, userBalance, userBets, onBe
             <input
               type="number"
               min={1}
-              max={userBalance}
+              max={Math.min(400, userBalance)}
               value={betAmount}
               onChange={(e) => setBetAmount(e.target.value)}
               placeholder="Amount (VT)"

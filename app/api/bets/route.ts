@@ -10,6 +10,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
   if (amount < 1) return NextResponse.json({ error: "Min bet is 1" }, { status: 400 });
+  if (amount > 400) return NextResponse.json({ error: "Max bet is 400 VT" }, { status: 400 });
 
   const [market] = await sql`SELECT * FROM markets WHERE id = ${market_id}`;
   if (!market) return NextResponse.json({ error: "Market not found" }, { status: 404 });
